@@ -156,6 +156,7 @@ def sync_once() -> tuple[bool, str]:
         has_new_decision = current_decision and current_decision != last_synced_decision
 
         payload: dict[str, Any] = {
+            "live_state": live_state,
             "bot_name": settings.bot_name,
             "new_trades": payload_trades,
         }
