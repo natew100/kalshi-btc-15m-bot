@@ -804,6 +804,30 @@ def run_forever() -> int:
                 db.insert_feature_row(conn, snapshot.event_id, now_iso, features)
                 db.set_cycle_decision_ts(conn, snapshot.event_id, now_iso)
 
+                # No model trained yet — collect data only, don't trade on coinflip.
+                if model_bundle is None:
+                    print(f"no_model event={snapshot.event_id} — collecting data only")
+                    db.insert_decision(
+                        conn,
+                        {
+                            "event_id": snapshot.event_id,
+                            "trade_external_id": None,
+                            "decided_at": now_iso,
+                            "model_prob": 0.5,
+                            "ask_yes": float(snapshot.best_ask),
+                            "ask_no": max(0.0, 100.0 - float(snapshot.best_bid)),
+                            "spread": float(snapshot.spread),
+                            "ev_yes": 0.0,
+                            "ev_no": 0.0,
+                            "chosen_side": None,
+                            "acted": False,
+                            "reason": "no_model",
+                            "mode": mode,
+                            "cost_cents": 0.0,
+                        },
+                    )
+
+            if not decided and model_bundle is not None and loop_started >= market_open + timedelta(seconds=settings.decision_offset_seconds):
                 prob_up = predict_prob(model_bundle, features)
                 top_attr = top_feature_contributions(model_bundle, features, top_k=3)
                 attr_text = ",".join([f"{k}:{v:+.3f}" for k, v in top_attr]) if top_attr else "none"
