@@ -653,6 +653,7 @@ def run_forever() -> int:
     last_train_attempt_at: datetime | None = None
     last_audit_snapshot_at = datetime.min.replace(tzinfo=timezone.utc)
     last_pause_signature = ""
+    last_real_decision_ts: str | None = None
 
     ok, message = maybe_train_model(conn, settings)
     if ok:
@@ -826,6 +827,7 @@ def run_forever() -> int:
                             "cost_cents": 0.0,
                         },
                     )
+                    last_real_decision_ts = now_iso
 
             if not decided and model_bundle is not None and loop_started >= market_open + timedelta(seconds=settings.decision_offset_seconds):
                 prob_up = predict_prob(model_bundle, features)
@@ -1273,6 +1275,7 @@ def run_forever() -> int:
                         "cost_cents": chosen_cost.per_contract_cost_cents,
                     },
                 )
+                last_real_decision_ts = now_iso
 
             status = _status_payload(
                 settings=settings,
@@ -1285,7 +1288,8 @@ def run_forever() -> int:
                 last_error=last_error,
                 conn=conn,
             )
-            status["last_decision_ts"] = now_iso
+            if last_real_decision_ts:
+                status["last_decision_ts"] = last_real_decision_ts
             _write_json(settings.status_path, status)
             if settings.audit_snapshot_interval_seconds > 0:
                 if (loop_started - last_audit_snapshot_at).total_seconds() >= settings.audit_snapshot_interval_seconds:
