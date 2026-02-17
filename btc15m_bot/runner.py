@@ -459,6 +459,8 @@ def _status_payload(
     cycle_age: float | None,
     last_error: str | None,
     conn,
+    *,
+    has_model: bool = True,
 ) -> dict:
     sync_state = _read_json(settings.sync_state_path)
     # "gate" represents the real strategy portfolio for the current mode.
@@ -510,6 +512,8 @@ def _status_payload(
     }
 
     warnings = [r for r in pause_reasons if str(r).startswith("warn:")]
+    if not has_model:
+        warnings.insert(0, "no model — collecting training data")
     errors = [r for r in pause_reasons if not str(r).startswith("warn:")]
     data_sources = {
         "market_provider": settings.market_provider,
@@ -739,6 +743,7 @@ def run_forever() -> int:
                     cycle_age=None,
                     last_error=last_error,
                     conn=conn,
+                    has_model=model_bundle is not None,
                 )
                 _write_json(settings.status_path, status)
                 last_error = None
@@ -1287,6 +1292,7 @@ def run_forever() -> int:
                 cycle_age=cycle_age,
                 last_error=last_error,
                 conn=conn,
+                has_model=model_bundle is not None,
             )
             if last_real_decision_ts:
                 status["last_decision_ts"] = last_real_decision_ts
