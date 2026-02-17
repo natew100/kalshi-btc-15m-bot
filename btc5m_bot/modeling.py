@@ -103,10 +103,10 @@ def _parse_iso(ts: str) -> datetime:
     return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
 
 
-def _filter_valid_5m_cycles(rows: list[Any]) -> list[Any]:
+def _filter_valid_cycles(rows: list[Any], min_seconds: float = 240.0, max_seconds: float = 1200.0) -> list[Any]:
     """
-    Guardrail: only train on rows that correspond to true 5-minute windows.
-    Earlier bugged cycles can have 24h spans and will poison training.
+    Guardrail: filter out obviously invalid cycle windows.
+    This supports 5m/15m style cycles while still excluding bad multi-hour spans.
     """
     out: list[Any] = []
     for r in rows:
@@ -116,7 +116,7 @@ def _filter_valid_5m_cycles(rows: list[Any]) -> list[Any]:
         except Exception:
             continue
         dur = (end - start).total_seconds()
-        if 290.0 <= dur <= 310.0:
+        if min_seconds <= dur <= max_seconds:
             out.append(r)
     return out
 
@@ -134,7 +134,7 @@ def train_model(conn, settings: Settings) -> tuple[bool, str]:
     run_id = db.insert_model_run_start(conn)
     try:
         rows = db.fetch_labeled_features(conn, lookback_days=settings.lookback_days)
-        rows = _filter_valid_5m_cycles(list(rows))
+        rows = _filter_valid_cycles(list(rows))
         if len(rows) < settings.min_train_rows:
             msg = f"insufficient rows: {len(rows)} < {settings.min_train_rows}"
             db.complete_model_run(conn, run_id, status="skipped", n_rows=len(rows), error=msg)
