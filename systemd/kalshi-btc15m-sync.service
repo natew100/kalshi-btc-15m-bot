@@ -1,0 +1,16 @@
+[Unit]
+Description=Kalshi BTC 15m -> KalshiHQ Sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/projects/kalshi-btc-15m-bot
+EnvironmentFile=/etc/kalshi-btc15m.env
+ExecStart=/root/projects/kalshi-btc-15m-bot/.venv/bin/python -u -m btc5m_bot.hq_sync
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
