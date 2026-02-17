@@ -165,7 +165,6 @@ class KalshiBTCClient:
     ) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
         """Split orderbook levels into bid-side and ask-side.
 
-        Kalshi returns both bids and asks in a single array per side.
         Prices at or below ``bid_price`` are resting buy orders (bids).
         Prices at or above ``ask_price`` are resting sell orders (asks).
         """
@@ -174,6 +173,27 @@ class KalshiBTCClient:
         bids.sort(key=lambda x: x[0], reverse=True)   # best bid first
         asks.sort(key=lambda x: x[0])                  # best ask first
         return bids, asks
+
+    @staticmethod
+    def _implied_ask_depth(
+        opposite_levels: list[tuple[float, float]], ask_price: float
+    ) -> tuple[float | None, float | None]:
+        """Derive ask depth from opposite-side buy orders.
+
+        A NO buy at price P implies a YES sell at (100-P).
+        To fill a YES buy at ``ask_price``, NO buys must be >= (100-ask_price).
+        Highest opposite bids give the tightest implied asks (best ask first).
+        """
+        if not opposite_levels:
+            return None, None
+        threshold = max(0.0, 100.0 - float(ask_price))
+        levels = [(px, sz) for px, sz in opposite_levels if px >= threshold]
+        if not levels:
+            return None, None
+        levels.sort(key=lambda x: x[0], reverse=True)
+        l1 = float(levels[0][1])
+        l3 = float(sum(sz for _px, sz in levels[:3]))
+        return l1, l3
 
     @staticmethod
     def _depth(levels: list[tuple[float, float]]) -> tuple[float | None, float | None]:
@@ -209,8 +229,13 @@ class KalshiBTCClient:
 
         bid_l1, bid_l3 = self._depth(yes_bids)
         ask_l1, ask_l3 = self._depth(yes_asks)
+        if ask_l1 is None:
+            ask_l1, ask_l3 = self._implied_ask_depth(no_levels, yes_ask)
+
         bid_l1_no, bid_l3_no = self._depth(no_bids)
         ask_l1_no, ask_l3_no = self._depth(no_asks)
+        if ask_l1_no is None:
+            ask_l1_no, ask_l3_no = self._implied_ask_depth(yes_levels, no_ask)
 
         spread = max(0.0, yes_ask - yes_bid)
         mid_yes = max(0.0, min(1.0, ((yes_bid + yes_ask) / 2.0) / 100.0))
