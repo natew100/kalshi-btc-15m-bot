@@ -1261,6 +1261,7 @@ def run_forever() -> int:
                 last_error=last_error,
                 conn=conn,
             )
+            status["last_decision_ts"] = now_iso
             _write_json(settings.status_path, status)
             if settings.audit_snapshot_interval_seconds > 0:
                 if (loop_started - last_audit_snapshot_at).total_seconds() >= settings.audit_snapshot_interval_seconds:

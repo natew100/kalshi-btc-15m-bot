@@ -148,11 +148,21 @@ def sync_once() -> tuple[bool, str]:
         status = _read_json(settings.status_path)
         live_state = status if status else {"bot": {"status": "running", "updated_at": db.utcnow_iso()}}
 
-        payload = {
+        # Only push live_state when a new decision has been made since last sync.
+        # This prevents HQ from recording every poll as a separate cycle row.
+        state = _read_json(settings.sync_state_path)
+        last_synced_decision = str(state.get("last_synced_decision_ts") or "")
+        current_decision = str(status.get("last_decision_ts") or "")
+        has_new_decision = current_decision and current_decision != last_synced_decision
+
+        payload: dict[str, Any] = {
             "bot_name": settings.bot_name,
-            "live_state": live_state,
             "new_trades": payload_trades,
         }
+        if has_new_decision or payload_trades:
+            payload["live_state"] = live_state
+            state["last_synced_decision_ts"] = current_decision
+            _write_json(settings.sync_state_path, state)
 
         resp = requests.post(
             settings.hq_sync_url,
