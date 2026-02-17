@@ -1,4 +1,4 @@
-from btc5m_bot.backtest import (
+from btc15m_bot.backtest import (
     ReplayRow,
     ReplayScenario,
     parse_reason_kv,

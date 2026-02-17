@@ -13,7 +13,11 @@ FEATURE_COLUMNS = [
     "ret_15s",
     "ret_30s",
     "ret_60s",
+    "ret_120s",
+    "ret_180s",
+    "ret_300s",
     "rv_60s",
+    "rv_180s",
     "tod_sin",
     "tod_cos",
     "prev1_up",
@@ -94,6 +98,9 @@ def build_feature_row(
     p_15 = _find_price_at_or_before(points, dt - timedelta(seconds=15))
     p_30 = _find_price_at_or_before(points, dt - timedelta(seconds=30))
     p_60 = _find_price_at_or_before(points, dt - timedelta(seconds=60))
+    p_120 = _find_price_at_or_before(points, dt - timedelta(seconds=120))
+    p_180 = _find_price_at_or_before(points, dt - timedelta(seconds=180))
+    p_300 = _find_price_at_or_before(points, dt - timedelta(seconds=300))
 
     def ret(base: float | None) -> float:
         if p_now is None or base is None or base <= 0:
@@ -115,7 +122,11 @@ def build_feature_row(
         "ret_15s": ret(p_15),
         "ret_30s": ret(p_30),
         "ret_60s": ret(p_60),
+        "ret_120s": ret(p_120),
+        "ret_180s": ret(p_180),
+        "ret_300s": ret(p_300),
         "rv_60s": _realized_vol(points, dt, lookback_sec=60),
+        "rv_180s": _realized_vol(points, dt, lookback_sec=180),
         "tod_sin": math.sin(angle),
         "tod_cos": math.cos(angle),
         "prev1_up": prev[0],

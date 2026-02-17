@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from btc5m_bot.kalshi_markets import KalshiBTCClient
+from btc15m_bot.kalshi_markets import KalshiBTCClient
 
 
 def _settings() -> SimpleNamespace:
@@ -51,3 +51,24 @@ def test_resolution_label_maps_yes_no() -> None:
     label, event = client.event_resolution_label("Y")
     assert label == 0
     assert event is not None
+
+
+def test_market_snapshot_handles_null_orderbook_sides() -> None:
+    client = KalshiBTCClient(settings=_settings())
+    market = {
+        "ticker": "KXBTC15M-26FEB162100-00",
+        "open_time": "2026-02-17T01:45:00Z",
+        "close_time": "2026-02-17T02:00:00Z",
+        "yes_bid": 22,
+        "yes_ask": 24,
+        "no_bid": 76,
+        "no_ask": 78,
+        "last_price": 25,
+    }
+
+    def _fake_orderbook(_ticker: str):
+        return [], []
+
+    client._orderbook = _fake_orderbook  # type: ignore[method-assign]
+    snap = client.market_snapshot(market)
+    assert snap is not None

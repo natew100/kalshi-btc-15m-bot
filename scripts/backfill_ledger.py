@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import argparse
 
-from btc5m_bot.backfill_ledger import backfill_all
-from btc5m_bot.config import ensure_runtime_paths, load_settings
+from btc15m_bot.backfill_ledger import backfill_all
+from btc15m_bot.config import ensure_runtime_paths, load_settings
 
 
 def main() -> int:

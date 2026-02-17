@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from btc5m_bot.strategy import (
+from btc15m_bot.strategy import (
     compute_edge,
     estimate_execution_cost,
     should_trade,

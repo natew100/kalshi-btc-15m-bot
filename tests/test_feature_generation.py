@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from btc5m_bot.features import build_feature_row
+from btc15m_bot.features import build_feature_row
 
 
 def test_feature_generation_at_open_plus_75_seconds() -> None:

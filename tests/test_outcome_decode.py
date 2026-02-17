@@ -1,4 +1,4 @@
-from btc5m_bot.polymarket import decode_outcome_prices, label_from_outcome_prices
+from btc15m_bot.polymarket import decode_outcome_prices, label_from_outcome_prices
 
 
 def test_decode_outcome_prices_from_json_string() -> None:

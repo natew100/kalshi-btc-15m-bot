@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-from btc5m_bot import db
-from btc5m_bot.gating import evaluate_auto_pause, evaluate_go_live_gate
+from btc15m_bot import db
+from btc15m_bot.gating import evaluate_auto_pause, evaluate_go_live_gate
 
 
 def _settings() -> SimpleNamespace:

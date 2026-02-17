@@ -69,7 +69,11 @@ def init_db(conn: sqlite3.Connection) -> None:
           ret_15s real not null,
           ret_30s real not null,
           ret_60s real not null,
+          ret_120s real not null default 0.0,
+          ret_180s real not null default 0.0,
+          ret_300s real not null default 0.0,
           rv_60s real not null,
+          rv_180s real not null default 0.0,
           tod_sin real not null,
           tod_cos real not null,
           prev1_up real not null,
@@ -272,9 +276,10 @@ def insert_feature_row(
         """
         insert into feature_rows(
           event_id, decision_ts, mid_yes, spread, imbalance_l1, imbalance_l3,
-          ret_15s, ret_30s, ret_60s, rv_60s, tod_sin, tod_cos,
+          ret_15s, ret_30s, ret_60s, ret_120s, ret_180s, ret_300s,
+          rv_60s, rv_180s, tod_sin, tod_cos,
           prev1_up, prev2_up, prev3_up
-        ) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         on conflict(event_id) do update set
           decision_ts=excluded.decision_ts,
           mid_yes=excluded.mid_yes,
@@ -284,7 +289,11 @@ def insert_feature_row(
           ret_15s=excluded.ret_15s,
           ret_30s=excluded.ret_30s,
           ret_60s=excluded.ret_60s,
+          ret_120s=excluded.ret_120s,
+          ret_180s=excluded.ret_180s,
+          ret_300s=excluded.ret_300s,
           rv_60s=excluded.rv_60s,
+          rv_180s=excluded.rv_180s,
           tod_sin=excluded.tod_sin,
           tod_cos=excluded.tod_cos,
           prev1_up=excluded.prev1_up,
@@ -301,7 +310,11 @@ def insert_feature_row(
             features["ret_15s"],
             features["ret_30s"],
             features["ret_60s"],
+            features["ret_120s"],
+            features["ret_180s"],
+            features["ret_300s"],
             features["rv_60s"],
+            features["rv_180s"],
             features["tod_sin"],
             features["tod_cos"],
             features["prev1_up"],

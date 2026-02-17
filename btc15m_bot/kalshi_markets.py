@@ -149,6 +149,10 @@ class KalshiBTCClient:
             ob = payload.get("orderbook", {}) if isinstance(payload, dict) else {}
             yes_raw = ob.get("yes", []) if isinstance(ob, dict) else []
             no_raw = ob.get("no", []) if isinstance(ob, dict) else []
+            if yes_raw is None:
+                yes_raw = []
+            if no_raw is None:
+                no_raw = []
             yes = [(float(l[0]), float(l[1])) for l in yes_raw if isinstance(l, list) and len(l) >= 2]
             no = [(float(l[0]), float(l[1])) for l in no_raw if isinstance(l, list) and len(l) >= 2]
             return yes, no
@@ -158,6 +162,8 @@ class KalshiBTCClient:
     @staticmethod
     def _ask_depth_from_opposite_bids(opposite_bids: list[tuple[float, float]], ask_price: float) -> tuple[float | None, float | None]:
         # To BUY one side at ask price p, the other side must have bids at >= (100-p).
+        if not opposite_bids:
+            return None, None
         threshold = max(0.0, 100.0 - float(ask_price))
         levels = [(px, sz) for (px, sz) in opposite_bids if px >= threshold]
         if not levels:

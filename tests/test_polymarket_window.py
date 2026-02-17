@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from btc5m_bot.polymarket import window_start_from_slug
+from btc15m_bot.polymarket import window_start_from_slug
 
 
 def test_window_start_from_slug_epoch_suffix() -> None:

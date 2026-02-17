@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from btc5m_bot.modeling import ModelBundle, top_feature_contributions
+from btc15m_bot.modeling import ModelBundle, top_feature_contributions
 
 
 @dataclass

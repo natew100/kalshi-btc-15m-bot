@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from btc5m_bot import db
+from btc15m_bot import db
 
 
 def test_trade_upsert_idempotent(tmp_path) -> None:

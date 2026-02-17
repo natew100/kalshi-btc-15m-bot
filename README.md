@@ -18,7 +18,7 @@ It integrates with KalshiHQ through existing endpoints:
 
 - Captures Kalshi BTC 15m market microstructure (`series_ticker=KXBTC15M`) at 1s cadence.
 - Generates features at `open + 180s` by default.
-- Trains `LogisticRegression(L2)` + `IsotonicRegression` on rolling 14 days.
+- Trains `LogisticRegression(L2, C=0.1)` + Platt scaling (`CalibratedClassifierCV`) on rolling 21 days.
 - Runs strict paper-first policy with go-live gating.
 - Settles outcomes from Kalshi official `market.result`.
 - Syncs live state + trades to KalshiHQ.
@@ -46,25 +46,25 @@ set +a
 Runner:
 
 ```bash
-python -m btc5m_bot.runner
+python -m btc15m_bot.runner
 ```
 
 Manual retrain:
 
 ```bash
-python -m btc5m_bot.retrain
+python -m btc15m_bot.retrain
 ```
 
 One-shot sync:
 
 ```bash
-python -m btc5m_bot.hq_sync --once
+python -m btc15m_bot.hq_sync --once
 ```
 
 Daily report:
 
 ```bash
-python -m btc5m_bot.daily_report
+python -m btc15m_bot.daily_report
 ```
 
 ## KalshiHQ bot registration

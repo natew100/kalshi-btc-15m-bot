@@ -12,15 +12,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from btc5m_bot.backtest import (
+from btc15m_bot.backtest import (
     ReplayScenario,
     load_replay_rows,
     replay_scenario,
     scenario_grid,
     stress_scenarios,
 )
-from btc5m_bot.config import load_settings
-from btc5m_bot.db import connect_db
+from btc15m_bot.config import load_settings
+from btc15m_bot.db import connect_db
 
 
 def _parse_args() -> argparse.Namespace:

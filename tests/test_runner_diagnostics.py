@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-from btc5m_bot import db
-from btc5m_bot.runner import _dynamic_thresholds, _whatif_metrics
+from btc15m_bot import db
+from btc15m_bot.runner import _dynamic_thresholds, _whatif_metrics
 
 
 def test_dynamic_thresholds_apply_high_vol_and_side_penalty() -> None:
