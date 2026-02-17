@@ -160,15 +160,26 @@ class KalshiBTCClient:
             return [], []
 
     @staticmethod
-    def _ask_depth_from_opposite_bids(opposite_bids: list[tuple[float, float]], ask_price: float) -> tuple[float | None, float | None]:
-        # To BUY one side at ask price p, the other side must have bids at >= (100-p).
-        if not opposite_bids:
-            return None, None
-        threshold = max(0.0, 100.0 - float(ask_price))
-        levels = [(px, sz) for (px, sz) in opposite_bids if px >= threshold]
+    def _split_book(
+        levels: list[tuple[float, float]], bid_price: float, ask_price: float
+    ) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+        """Split orderbook levels into bid-side and ask-side.
+
+        Kalshi returns both bids and asks in a single array per side.
+        Prices at or below ``bid_price`` are resting buy orders (bids).
+        Prices at or above ``ask_price`` are resting sell orders (asks).
+        """
+        bids = [(px, sz) for px, sz in levels if px <= bid_price]
+        asks = [(px, sz) for px, sz in levels if px >= ask_price]
+        bids.sort(key=lambda x: x[0], reverse=True)   # best bid first
+        asks.sort(key=lambda x: x[0])                  # best ask first
+        return bids, asks
+
+    @staticmethod
+    def _depth(levels: list[tuple[float, float]]) -> tuple[float | None, float | None]:
+        """Return L1 size and L3 cumulative size from sorted levels."""
         if not levels:
             return None, None
-        levels.sort(key=lambda x: x[0], reverse=True)
         l1 = float(levels[0][1])
         l3 = float(sum(sz for _px, sz in levels[:3]))
         return l1, l3
@@ -193,13 +204,13 @@ class KalshiBTCClient:
             return None
 
         yes_levels, no_levels = self._orderbook(ticker)
-        bid_l1 = float(yes_levels[0][1]) if yes_levels else None
-        bid_l3 = float(sum(sz for _px, sz in yes_levels[:3])) if yes_levels else None
-        bid_l1_no = float(no_levels[0][1]) if no_levels else None
-        bid_l3_no = float(sum(sz for _px, sz in no_levels[:3])) if no_levels else None
+        yes_bids, yes_asks = self._split_book(yes_levels, yes_bid, yes_ask)
+        no_bids, no_asks = self._split_book(no_levels, no_bid, no_ask)
 
-        ask_l1, ask_l3 = self._ask_depth_from_opposite_bids(no_levels, yes_ask)
-        ask_l1_no, ask_l3_no = self._ask_depth_from_opposite_bids(yes_levels, no_ask)
+        bid_l1, bid_l3 = self._depth(yes_bids)
+        ask_l1, ask_l3 = self._depth(yes_asks)
+        bid_l1_no, bid_l3_no = self._depth(no_bids)
+        ask_l1_no, ask_l3_no = self._depth(no_asks)
 
         spread = max(0.0, yes_ask - yes_bid)
         mid_yes = max(0.0, min(1.0, ((yes_bid + yes_ask) / 2.0) / 100.0))
