@@ -60,6 +60,7 @@ class KalshiBTCClient:
         self.session = requests.Session()
         self._active_cache_event: dict[str, Any] | None = None
         self._active_cache_until: datetime | None = None
+        self._no_active_until: datetime | None = None
 
     @staticmethod
     def _imbalance(bid: float | None, ask: float | None) -> float | None:
@@ -109,6 +110,8 @@ class KalshiBTCClient:
 
     def get_active_event(self, _unused_series_id: int) -> dict[str, Any] | None:
         now = datetime.now(timezone.utc)
+        if self._no_active_until is not None and now < self._no_active_until:
+            return None
         if self._active_cache_event is not None and self._active_cache_until and now < self._active_cache_until:
             return self._active_cache_event
 
@@ -123,12 +126,14 @@ class KalshiBTCClient:
             if open_ts <= now < close_ts:
                 in_window.append(m)
         if not in_window:
+            self._no_active_until = now + timedelta(seconds=5)
             return None
         in_window.sort(key=lambda x: str(x.get("close_time", "")))
         chosen = in_window[0]
         close_ts = _parse_iso(str(chosen.get("close_time")))
         self._active_cache_event = chosen
         self._active_cache_until = close_ts + timedelta(seconds=1)
+        self._no_active_until = None
         return chosen
 
     def _orderbook(self, ticker: str) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
