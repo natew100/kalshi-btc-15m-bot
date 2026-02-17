@@ -763,6 +763,17 @@ def run_forever() -> int:
             )
 
             now_iso = loop_started.isoformat()
+            market_open = _parse_iso(snapshot.start_ts)
+            cycle_age = _cycle_age_seconds(loop_started, snapshot.start_ts)
+
+            decided = db.cycle_already_decided(conn, snapshot.event_id)
+
+            # After decision is made, skip tick collection — no value in polling
+            # the same event repeatedly.  Just wait for settlement.
+            if decided:
+                time.sleep(max(5, settings.poll_interval_seconds))
+                continue
+
             spot_price = spot_client.blended_btc_price()
             if spot_price:
                 db.insert_spot_tick(conn, now_iso, spot_price)
@@ -786,11 +797,6 @@ def run_forever() -> int:
                     "spot_price": spot_price,
                 },
             )
-
-            market_open = _parse_iso(snapshot.start_ts)
-            cycle_age = _cycle_age_seconds(loop_started, snapshot.start_ts)
-
-            decided = db.cycle_already_decided(conn, snapshot.event_id)
             if not decided and loop_started >= market_open + timedelta(seconds=settings.decision_offset_seconds):
                 ticks = [dict(r) for r in db.all_ticks_for_event(conn, snapshot.event_id)]
                 prev = db.recent_outcomes(conn, before_ts=now_iso, limit=3)
