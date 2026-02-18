@@ -95,6 +95,8 @@ class Settings:
     model_stuck_window: int
     model_stuck_epsilon: float
     max_sync_stale_seconds: int
+    evening_skip_start_hour_et: int
+    evening_skip_end_hour_et: int
     extreme_prob_guard_enabled: bool
     extreme_prob_threshold: float
     extreme_prob_lookback_days: int
@@ -203,6 +205,8 @@ def load_settings() -> Settings:
         model_stuck_window=_env_int("MODEL_STUCK_WINDOW", 20),
         model_stuck_epsilon=_env_float("MODEL_STUCK_EPSILON", 1e-4),
         max_sync_stale_seconds=_env_int("MAX_SYNC_STALE_SECONDS", 300),
+        evening_skip_start_hour_et=_env_int("EVENING_SKIP_START_HOUR_ET", 22),
+        evening_skip_end_hour_et=_env_int("EVENING_SKIP_END_HOUR_ET", 24),
         extreme_prob_guard_enabled=_env_bool("EXTREME_PROB_GUARD_ENABLED", True),
         extreme_prob_threshold=_env_float("EXTREME_PROB_THRESHOLD", 0.95),
         extreme_prob_lookback_days=_env_int("EXTREME_PROB_LOOKBACK_DAYS", 14),

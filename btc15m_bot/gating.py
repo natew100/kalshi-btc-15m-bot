@@ -234,3 +234,28 @@ def gate_to_dict(gate: GateResult) -> dict:
         "drawdown_window_days": gate.drawdown_window_days,
         "reasons": gate.reasons,
     }
+
+
+# ── Evening time-of-day skip ──────────────────────────────────────────────
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
+
+_ET = ZoneInfo("America/New_York")
+
+
+def is_evening_skip_window(
+    now_utc: datetime,
+    start_hour_et: int = 22,
+    end_hour_et: int = 24,
+) -> bool:
+    """Return True if *now_utc* falls inside the evening skip window (ET).
+
+    Default window: 10 PM – midnight ET.
+    The bot should still collect ticks and run shadow trades during this
+    window — only the gate/live portfolio is gated.
+    """
+    et = now_utc.astimezone(_ET)
+    return start_hour_et <= et.hour < end_hour_et

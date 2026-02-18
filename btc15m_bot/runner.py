@@ -10,7 +10,7 @@ from urllib import request
 from . import db
 from .config import Settings, ensure_runtime_paths, load_settings
 from .features import build_feature_row
-from .gating import evaluate_auto_pause, evaluate_go_live_gate, gate_to_dict
+from .gating import evaluate_auto_pause, evaluate_go_live_gate, gate_to_dict, is_evening_skip_window
 from .hq_sync import _read_json, _write_json, push_settlements
 from .modeling import load_model, maybe_train_model, predict_prob, top_feature_contributions, train_model
 from .kalshi_markets import KalshiBTCClient
@@ -557,6 +557,12 @@ def _status_payload(
         "data_sources": data_sources,
         "gate": gate_to_dict(gate),
         "sync": sync_state,
+        "evening_skip": is_evening_skip_window(
+            datetime.now(timezone.utc),
+            start_hour_et=settings.evening_skip_start_hour_et,
+            end_hour_et=settings.evening_skip_end_hour_et,
+        ),
+        "evening_skip_window_et": f"{settings.evening_skip_start_hour_et}:00-{settings.evening_skip_end_hour_et % 24}:00",
     }
 
 
@@ -992,6 +998,14 @@ def run_forever() -> int:
                 if paused:
                     trade_ok = False
                     reason = f"auto_pause:{','.join(pause_reasons)}"
+                evening_skip = is_evening_skip_window(
+                    loop_started,
+                    start_hour_et=settings.evening_skip_start_hour_et,
+                    end_hour_et=settings.evening_skip_end_hour_et,
+                )
+                if trade_ok and evening_skip:
+                    trade_ok = False
+                    reason = "evening_skip"
 
                 if mode == "live" and db.count_open_live_positions(conn) >= settings.max_open_live_positions:
                     trade_ok = False
