@@ -139,11 +139,17 @@ def sync_once() -> tuple[bool, str]:
             state["last_trade_backfill_at"] = datetime.now(timezone.utc).isoformat()
             _write_json(settings.sync_state_path, state)
 
-        by_external: dict[str, dict[str, Any]] = {}
-        for r in backfill_rows + rows:
-            d = dict(r)
-            by_external[str(d["external_id"])] = d
-        payload_trades = [_trade_to_sync_payload(d) for d in by_external.values()]
+        # Separate genuinely new trades from backfill upserts so HQ can count
+        # posted_trades accurately (only new trades count toward cycle stats).
+        new_trade_ids = {str(r["external_id"]) for r in rows}
+        new_trades = [_trade_to_sync_payload(dict(r)) for r in rows]
+
+        upsert_trades: list[dict[str, Any]] = []
+        if backfill_rows:
+            for r in backfill_rows:
+                d = dict(r)
+                if str(d["external_id"]) not in new_trade_ids:
+                    upsert_trades.append(_trade_to_sync_payload(d))
 
         status = _read_json(settings.status_path)
         live_state = status if status else {"bot": {"status": "running", "updated_at": db.utcnow_iso()}}
@@ -156,11 +162,12 @@ def sync_once() -> tuple[bool, str]:
         has_new_decision = current_decision and current_decision != last_synced_decision
 
         payload: dict[str, Any] = {
-
             "bot_name": settings.bot_name,
-            "new_trades": payload_trades,
+            "new_trades": new_trades,
         }
-        if has_new_decision or payload_trades:
+        if upsert_trades:
+            payload["upsert_trades"] = upsert_trades
+        if has_new_decision or new_trades:
             payload["live_state"] = live_state
             state["last_synced_decision_ts"] = current_decision
             _write_json(settings.sync_state_path, state)
