@@ -142,11 +142,14 @@ def should_trade(
     in_window: bool,
     min_edge_cents: float,
     max_spread_cents: float,
+    max_edge_cents: float = 0.0,
 ) -> tuple[bool, str]:
     if not in_window:
         return False, "outside_decision_window"
     if chosen_ev_cents < min_edge_cents:
         return False, "edge_below_threshold"
+    if max_edge_cents > 0 and chosen_ev_cents > max_edge_cents:
+        return False, "edge_above_cap"
     if spread_cents > max_spread_cents:
         return False, "spread_too_wide"
     return True, "ok"

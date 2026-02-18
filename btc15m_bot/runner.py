@@ -951,6 +951,7 @@ def run_forever() -> int:
                     in_window=in_window,
                     min_edge_cents=dynamic_min_edge,
                     max_spread_cents=dynamic_max_spread,
+                    max_edge_cents=settings.max_edge_cents,
                 )
 
                 if not chosen_fill.filled:
@@ -1069,6 +1070,7 @@ def run_forever() -> int:
                             in_window=in_window,
                             min_edge_cents=dynamic_min_edge,
                             max_spread_cents=dynamic_max_spread,
+                            max_edge_cents=settings.max_edge_cents,
                         )
                         if trade_ok:
                             chosen_fill = sized_fill
@@ -1228,6 +1230,7 @@ def run_forever() -> int:
             )
             if last_real_decision_ts:
                 status["last_decision_ts"] = last_real_decision_ts
+            status["last_decision_reason"] = reason
             _write_json(settings.status_path, status)
             if settings.audit_snapshot_interval_seconds > 0:
                 if (loop_started - last_audit_snapshot_at).total_seconds() >= settings.audit_snapshot_interval_seconds:

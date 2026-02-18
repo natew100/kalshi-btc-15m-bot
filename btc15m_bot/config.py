@@ -51,6 +51,7 @@ class Settings:
     l1_slippage_buffer_cents: float
     l3_slippage_buffer_cents: float
     min_edge_cents: float
+    max_edge_cents: float
     max_spread_cents: float
     max_overround_cents: float
     l3_slippage_cents: float
@@ -163,6 +164,7 @@ def load_settings() -> Settings:
         l1_slippage_buffer_cents=_env_float("L1_SLIPPAGE_BUFFER_CENTS", 0.05),
         l3_slippage_buffer_cents=_env_float("L3_SLIPPAGE_BUFFER_CENTS", 0.35),
         min_edge_cents=_env_float("MIN_EDGE_CENTS", 1.8),
+        max_edge_cents=_env_float("MAX_EDGE_CENTS", 20.0),
         max_spread_cents=_env_float("MAX_SPREAD_CENTS", 2.0),
         max_overround_cents=_env_float("MAX_OVERROUND_CENTS", 3.0),
         l3_slippage_cents=_env_float("L3_SLIPPAGE_CENTS", 1.0),
