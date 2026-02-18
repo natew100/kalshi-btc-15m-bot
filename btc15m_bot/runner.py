@@ -650,6 +650,7 @@ def run_forever() -> int:
     spot_client = SpotPriceClient(settings=settings, timeout=3)
 
     last_error: str | None = None
+    last_decision_reason: str | None = None
     last_settle_scan_at = datetime.min.replace(tzinfo=timezone.utc)
     last_cleanup_at = datetime.min.replace(tzinfo=timezone.utc)
     last_train_attempt_at: datetime | None = None
@@ -831,6 +832,7 @@ def run_forever() -> int:
                         },
                     )
                     last_real_decision_ts = now_iso
+                    last_decision_reason = "no_model"
 
             if not decided and model_bundle is not None and loop_started >= market_open + timedelta(seconds=settings.decision_offset_seconds):
                 prob_up = predict_prob(model_bundle, features)
@@ -1215,6 +1217,7 @@ def run_forever() -> int:
                     },
                 )
                 last_real_decision_ts = now_iso
+                last_decision_reason = reason
 
             status = _status_payload(
                 settings=settings,
@@ -1230,7 +1233,8 @@ def run_forever() -> int:
             )
             if last_real_decision_ts:
                 status["last_decision_ts"] = last_real_decision_ts
-            status["last_decision_reason"] = reason
+            if last_decision_reason is not None:
+                status["last_decision_reason"] = last_decision_reason
             _write_json(settings.status_path, status)
             if settings.audit_snapshot_interval_seconds > 0:
                 if (loop_started - last_audit_snapshot_at).total_seconds() >= settings.audit_snapshot_interval_seconds:
