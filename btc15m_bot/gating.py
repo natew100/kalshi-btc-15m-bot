@@ -254,8 +254,8 @@ def is_evening_skip_window(
     """Return True if *now_utc* falls inside the evening skip window (ET).
 
     Default window: 10 PM – midnight ET.
-    The bot should still collect ticks and run shadow trades during this
-    window — only the gate/live portfolio is gated.
+    The bot should still collect ticks during this window — only the
+    gate/live portfolio is gated.
     """
     et = now_utc.astimezone(_ET)
     return start_hour_et <= et.hour < end_hour_et

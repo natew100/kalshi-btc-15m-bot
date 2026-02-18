@@ -73,7 +73,6 @@ class Settings:
     max_trades_per_cycle: int
     max_open_live_positions: int
     paper_bankroll_cents: int
-    shadow_enabled: bool
 
     lookback_days: int
     min_train_rows: int
@@ -186,7 +185,6 @@ def load_settings() -> Settings:
         max_trades_per_cycle=_env_int("MAX_TRADES_PER_CYCLE", 2),
         max_open_live_positions=_env_int("MAX_OPEN_LIVE_POSITIONS", 1),
         paper_bankroll_cents=_env_int("PAPER_BANKROLL_CENTS", 200000),
-        shadow_enabled=_env_bool("SHADOW_ENABLED", True),
         lookback_days=_env_int("LOOKBACK_DAYS", 21),
         min_train_rows=_env_int("MIN_TRAIN_ROWS", 200),
         retrain_utc_hour=_env_int("RETRAIN_UTC_HOUR", 0),

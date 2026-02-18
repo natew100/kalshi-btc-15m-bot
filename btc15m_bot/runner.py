@@ -474,20 +474,14 @@ def _status_payload(
         },
     }
     payload["portfolios"]["gate"]["cash"] = _portfolio_cash_state(conn, settings, modes=gate_modes)
-    if settings.shadow_enabled:
-        payload["daily_shadow"] = _daily_stats(conn, settings, modes=("shadow",))
-        payload["portfolios"]["shadow"] = _portfolio_kpis(conn, settings, modes=("shadow",))
-        payload["portfolios"]["shadow"]["cash"] = _portfolio_cash_state(conn, settings, modes=("shadow",))
 
     day_floor = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     payload["diagnostics"] = {
         "execution": {
             "gate": _execution_metrics(conn, day_floor, modes=gate_modes),
-            "shadow": _execution_metrics(conn, day_floor, modes=("shadow",)) if settings.shadow_enabled else None,
         },
         "calibration": {
             "gate": _calibration_metrics(conn, day_floor, modes=gate_modes),
-            "shadow": _calibration_metrics(conn, day_floor, modes=("shadow",)) if settings.shadow_enabled else None,
         },
         "whatif": {
             "gate": _whatif_metrics(
@@ -575,7 +569,6 @@ def _append_audit_snapshot(settings: Settings, status_payload: dict, now_utc: da
         "ts": now_utc.isoformat(),
         "status": status_payload.get("status"),
         "daily": status_payload.get("daily"),
-        "daily_shadow": status_payload.get("daily_shadow"),
         "gate": status_payload.get("gate"),
         "portfolios": status_payload.get("portfolios"),
         "diagnostics": status_payload.get("diagnostics"),
@@ -625,7 +618,6 @@ def _settle_due_cycles(conn, settings: Settings, market_client: KalshiBTCClient)
                 settled_at=settled_at,
                 settlement_source="kalshi_official",
             )
-            # Only sync non-shadow portfolios to HQ.
             if str(trade["mode"]) in ("paper", "live"):
                 settlements.append(
                     {
@@ -1012,7 +1004,6 @@ def run_forever() -> int:
                     reason = "live_position_cap"
 
                 # Determine size for the gate portfolio (paper) after gating checks.
-                # Shadow stays at 1 contract so we keep a high cadence baseline.
                 qty_gate = None
                 if trade_ok:
                     cash_gate = _portfolio_cash_state(conn, settings, modes=(mode,))
@@ -1108,86 +1099,13 @@ def run_forever() -> int:
                     f" trade_ok={int(trade_ok)} reason={reason}"
                 )
 
-                # Always-on "shadow" portfolio: trade every cycle (paper-sim) to measure model + execution realism.
-                if settings.shadow_enabled:
-                    if db.trade_count_for_event_modes(conn, snapshot.event_id, ("shadow",)) > 0:
-                        print(f"skip shadow duplicate event={snapshot.event_id}")
-                    elif db.trade_count_for_event_modes(conn, snapshot.event_id, ("paper", "shadow", "live")) >= int(
-                        settings.max_trades_per_cycle
-                    ):
-                        print(f"skip shadow cap event={snapshot.event_id} max_trades_per_cycle={settings.max_trades_per_cycle}")
-                    else:
-                        cash_shadow = _portfolio_cash_state(conn, settings, modes=("shadow",))
-                        qty = 1
-                        max_loss_shadow = int(round(float(fill_px_yes if chosen_side == "yes" else fill_px_no))) * qty
-                        shadow_cost = estimate_execution_cost(
-                            price_cents=(fill_px_yes if chosen_side == "yes" else fill_px_no),
-                            quantity=qty,
-                            fill_tier=chosen_fill.tier,
-                            fee_fixed_cents_per_contract=settings.fee_fixed_cents_per_contract,
-                            fee_bps_per_notional=settings.fee_bps_per_notional,
-                            l1_slippage_buffer_cents=settings.l1_slippage_buffer_cents,
-                            l3_slippage_buffer_cents=settings.l3_slippage_buffer_cents,
-                        )
-                        fees_shadow = int(shadow_cost.fee_cents)
-                        slippage_shadow = int(shadow_cost.slippage_buffer_cents)
-                        shadow = build_trade_payload(
-                            event_id=snapshot.event_id,
-                            ticker=snapshot.ticker,
-                            side=chosen_side,
-                            mode="shadow",
-                            quantity=qty,
-                            model_prob_up=prob_up,
-                            ask_yes_cents=fill_px_yes,
-                            ask_no_cents=fill_px_no,
-                            chosen_ev_cents=max(choice_ev_yes, choice_ev_no),
-                            reason=(
-                                "shadow"
-                                f"|book_ev_yes={book_ev_yes:.3f},book_ev_no={book_ev_no:.3f}"
-                                f"|fill_ev_yes={fill_ev_yes:.3f},fill_ev_no={fill_ev_no:.3f}"
-                                f"|spread_yes={spread_yes:.3f},spread_no={spread_no:.3f}"
-                                f"|overround={overround_cents:.3f},overround_known={int(overround_known)}"
-                                f"|fill_yes={fill_yes.tier}:{fill_yes.reason},fill_no={fill_no.tier}:{fill_no.reason}"
-                                f"|rv_60s={rv_60s:.6f},min_edge={dynamic_min_edge:.3f},max_spread={dynamic_max_spread:.3f}"
-                                f"|side_n={side_n},side_wr={side_wr:.3f},tags={','.join(threshold_tags) if threshold_tags else '-'}"
-                                f"|attr={attr_text}"
-                            ),
-                        )
-                        shadow.update(
-                            {
-                                "balance_before_cents": cash_shadow["cash_cents"],
-                                "balance_after_cents": cash_shadow["cash_cents"] - max_loss_shadow - fees_shadow,
-                                "position_notional_cents": max_loss_shadow,
-                                "max_loss_cents": max_loss_shadow,
-                                "fees_cents": fees_shadow,
-                                "expected_fee_cents": fees_shadow,
-                                "realized_slippage_cents": slippage_shadow,
-                                "all_in_cost_cents": fees_shadow + slippage_shadow,
-                                "requested_qty": qty,
-                                "filled_qty": qty if chosen_fill.filled else 0,
-                                "fill_tier": chosen_fill.tier,
-                                "fill_reason": chosen_fill.reason,
-                                "fill_slippage_cents": max(
-                                    0.0,
-                                    float(fill_px_yes if chosen_side == "yes" else fill_px_no)
-                                    - float(ask_yes if chosen_side == "yes" else ask_no),
-                                ),
-                            }
-                        )
-                        if cash_shadow["cash_cents"] < max_loss_shadow:
-                            shadow["status"] = "no_fill"
-                            shadow["reasoning"] = f"{shadow['reasoning']}|insufficient_cash"
-                        else:
-                            shadow["status"] = "dry_run" if chosen_fill.filled else "no_fill"
-                        db.insert_trade(conn, shadow)
-
                 trade_external_id = None
                 if trade_ok:
                     if db.trade_count_for_event_modes(conn, snapshot.event_id, (mode,)) > 0:
                         trade_ok = False
                         reason = "cycle_write_lock"
                     elif db.trade_count_for_event_modes(
-                        conn, snapshot.event_id, ("paper", "shadow", "live")
+                        conn, snapshot.event_id, ("paper", "live")
                     ) >= int(settings.max_trades_per_cycle):
                         trade_ok = False
                         reason = "cycle_trade_cap"

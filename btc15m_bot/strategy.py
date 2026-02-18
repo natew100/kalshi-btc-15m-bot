@@ -39,7 +39,7 @@ def simulate_buy_fill(
     l3_slippage_cents: float,
 ) -> FillResult:
     """
-    Coarse fill simulator for paper/shadow.
+    Coarse fill simulator for paper trading.
 
     - qty <= L1 ask size: fill at best ask
     - qty <= L3 cumulative ask size: fill at best ask + slippage
@@ -196,7 +196,7 @@ def build_trade_payload(
         "edge": float(edge_prob),
         "kelly_fraction": float(kelly_from_prob(side_prob, price_cents)),
         "confidence": float(confidence_from_prob(model_prob_up)),
-        "status": "dry_run" if mode in ("paper", "shadow") else "pending",
+        "status": "dry_run" if mode == "paper" else "pending",
         "pnl_cents": None,
         "reasoning": reason,
         "mode": mode,
