@@ -737,10 +737,18 @@ def fetch_model_runs_since(conn: sqlite3.Connection, after_id: int) -> list[sqli
 def fetch_market_cycles_since(
     conn: sqlite3.Connection, since_ts: str, limit: int = 2000
 ) -> list[sqlite3.Row]:
-    """Fetch cycles updated since the given timestamp (for HQ sync)."""
+    """Fetch cycles updated since the given timestamp (for HQ sync).
+
+    Left-joins the decisions table to include the skip/trade reason and
+    whether the bot acted (placed a trade) on each cycle.
+    """
     return conn.execute(
-        "SELECT event_id, market_id, slug, ticker, start_ts, end_ts, "
-        "decision_ts, resolution_ts, label_up, resolved, created_at, updated_at "
-        "FROM cycles WHERE updated_at > ? ORDER BY updated_at LIMIT ?",
+        "SELECT c.event_id, c.market_id, c.slug, c.ticker, c.start_ts, c.end_ts, "
+        "c.decision_ts, c.resolution_ts, c.label_up, c.resolved, "
+        "c.created_at, c.updated_at, "
+        "d.reason AS skip_reason, d.acted "
+        "FROM cycles c "
+        "LEFT JOIN decisions d ON d.event_id = c.event_id "
+        "WHERE c.updated_at > ? ORDER BY c.updated_at LIMIT ?",
         (since_ts, limit),
     ).fetchall()

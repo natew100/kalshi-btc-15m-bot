@@ -196,6 +196,8 @@ def sync_once() -> tuple[bool, str]:
                     "resolution_ts": r["resolution_ts"],
                     "label_up": r["label_up"],
                     "resolved": bool(r["resolved"]),
+                    "skip_reason": r["skip_reason"],
+                    "acted": bool(r["acted"]) if r["acted"] is not None else None,
                 }
                 for r in new_cycles
             ]
