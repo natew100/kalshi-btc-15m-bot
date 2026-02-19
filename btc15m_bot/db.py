@@ -746,7 +746,9 @@ def fetch_market_cycles_since(
         "SELECT c.event_id, c.market_id, c.slug, c.ticker, c.start_ts, c.end_ts, "
         "c.decision_ts, c.resolution_ts, c.label_up, c.resolved, "
         "c.created_at, c.updated_at, "
-        "d.reason AS skip_reason, d.acted "
+        "CASE WHEN d.reason IS NOT NULL THEN "
+        "SUBSTR(d.reason, 1, CASE WHEN INSTR(d.reason, '|') > 0 THEN INSTR(d.reason, '|') - 1 ELSE LENGTH(d.reason) END) "
+        "ELSE NULL END AS skip_reason, d.acted "
         "FROM cycles c "
         "LEFT JOIN decisions d ON d.event_id = c.event_id "
         "WHERE c.updated_at > ? ORDER BY c.updated_at LIMIT ?",
