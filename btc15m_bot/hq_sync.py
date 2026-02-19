@@ -172,6 +172,14 @@ def sync_once() -> tuple[bool, str]:
             state["last_synced_decision_ts"] = current_decision
             _write_json(settings.sync_state_path, state)
 
+        # Sync model training runs
+        last_model_run_id = int(state.get("last_synced_model_run_id") or 0)
+        new_runs = db.fetch_model_runs_since(conn, last_model_run_id)
+        if new_runs:
+            payload["model_runs"] = [dict(r) for r in new_runs]
+            state["last_synced_model_run_id"] = new_runs[-1]["id"]
+            _write_json(settings.sync_state_path, state)
+
         resp = requests.post(
             settings.hq_sync_url,
             json=payload,

@@ -724,3 +724,11 @@ def latest_model_run(conn: sqlite3.Connection) -> sqlite3.Row | None:
     return conn.execute(
         "select * from model_runs order by id desc limit 1"
     ).fetchone()
+
+
+def fetch_model_runs_since(conn: sqlite3.Connection, after_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT id, started_at, finished_at, n_rows, brier, logloss, auc, status, error "
+        "FROM model_runs WHERE id > ? ORDER BY id",
+        (after_id,),
+    ).fetchall()
