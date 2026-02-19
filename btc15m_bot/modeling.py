@@ -38,12 +38,11 @@ def predict_prob(bundle: ModelBundle | None, feature_row: dict[str, float]) -> f
         return 0.5
 
     x = np.array([[feature_row[col] for col in bundle.feature_columns]], dtype=float)
+    raw = float(bundle.logistic.predict_proba(x)[:, 1][0])
     try:
-        # CalibratedClassifierCV wraps the base estimator — use predict_proba directly.
-        calibrated = float(bundle.calibrator.predict_proba(x)[:, 1][0])
+        calibrated = float(bundle.calibrator.predict([raw])[0])
     except Exception:
-        # Fallback to raw logistic if calibrator fails.
-        calibrated = float(bundle.logistic.predict_proba(x)[:, 1][0])
+        calibrated = raw
     return max(0.01, min(0.99, calibrated))
 
 
@@ -142,7 +141,7 @@ def train_model(conn, settings: Settings) -> tuple[bool, str]:
             return False, msg
 
         # Lazy import so runtime can still operate without sklearn until training is needed.
-        from sklearn.calibration import CalibratedClassifierCV
+        from sklearn.isotonic import IsotonicRegression
         from sklearn.linear_model import LogisticRegression
         from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
 
@@ -158,11 +157,11 @@ def train_model(conn, settings: Settings) -> tuple[bool, str]:
         logistic = LogisticRegression(max_iter=2000, penalty="l2", solver="lbfgs", C=0.1)
         logistic.fit(x_train, y_train)
 
-        # Platt scaling (sigmoid) instead of isotonic — isotonic overfits below ~1000 calibration samples.
-        # CalibratedClassifierCV with method="sigmoid" fits a 2-parameter logistic on the val set.
-        calibrator = CalibratedClassifierCV(logistic, method="sigmoid", cv="prefit")
-        calibrator.fit(x_val, y_val)
-        p_cal = calibrator.predict_proba(x_val)[:, 1]
+        # Isotonic calibration on validation set probabilities.
+        p_val = logistic.predict_proba(x_val)[:, 1]
+        calibrator = IsotonicRegression(out_of_bounds="clip")
+        calibrator.fit(p_val, y_val)
+        p_cal = calibrator.predict(p_val)
 
         brier = float(brier_score_loss(y_val, p_cal))
         ll = float(log_loss(y_val, np.clip(p_cal, 1e-6, 1 - 1e-6)))
