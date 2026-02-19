@@ -732,3 +732,15 @@ def fetch_model_runs_since(conn: sqlite3.Connection, after_id: int) -> list[sqli
         "FROM model_runs WHERE id > ? ORDER BY id",
         (after_id,),
     ).fetchall()
+
+
+def fetch_market_cycles_since(
+    conn: sqlite3.Connection, since_ts: str, limit: int = 2000
+) -> list[sqlite3.Row]:
+    """Fetch cycles updated since the given timestamp (for HQ sync)."""
+    return conn.execute(
+        "SELECT event_id, market_id, slug, ticker, start_ts, end_ts, "
+        "decision_ts, resolution_ts, label_up, resolved, created_at, updated_at "
+        "FROM cycles WHERE updated_at > ? ORDER BY updated_at LIMIT ?",
+        (since_ts, limit),
+    ).fetchall()

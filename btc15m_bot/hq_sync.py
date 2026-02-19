@@ -180,6 +180,28 @@ def sync_once() -> tuple[bool, str]:
             state["last_synced_model_run_id"] = new_runs[-1]["id"]
             _write_json(settings.sync_state_path, state)
 
+        # Sync market cycles (updated_at cursor — catches new + resolved)
+        last_cycle_ts = str(state.get("last_synced_cycle_ts") or "")
+        new_cycles = db.fetch_market_cycles_since(conn, last_cycle_ts)
+        if new_cycles:
+            payload["market_cycles"] = [
+                {
+                    "event_id": str(r["event_id"]),
+                    "market_id": str(r["market_id"]),
+                    "slug": str(r["slug"]),
+                    "ticker": str(r["ticker"]),
+                    "start_ts": str(r["start_ts"]),
+                    "end_ts": str(r["end_ts"]),
+                    "decision_ts": r["decision_ts"],
+                    "resolution_ts": r["resolution_ts"],
+                    "label_up": r["label_up"],
+                    "resolved": bool(r["resolved"]),
+                }
+                for r in new_cycles
+            ]
+            state["last_synced_cycle_ts"] = new_cycles[-1]["updated_at"]
+            _write_json(settings.sync_state_path, state)
+
         resp = requests.post(
             settings.hq_sync_url,
             json=payload,
