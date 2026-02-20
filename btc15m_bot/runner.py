@@ -710,7 +710,7 @@ def run_forever() -> int:
             paused, pause_reasons = evaluate_auto_pause(conn, settings, last_sync_ok_at)
             if mode == "paper":
                 # Paper mode is R&D. Keep trading so we gather data, but surface risk signals as warnings.
-                hard = {"sync_stale", "sync_timestamp_invalid", "daily_net_stop", "model_output_stuck"}
+                hard = {"sync_stale", "sync_timestamp_invalid", "daily_net_stop", "model_output_stuck", "model_diversity_low"}
                 hard_reasons = [r for r in pause_reasons if r in hard]
                 soft_reasons = [r for r in pause_reasons if r not in hard]
                 paused = len(hard_reasons) > 0

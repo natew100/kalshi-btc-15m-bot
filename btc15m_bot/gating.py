@@ -197,7 +197,6 @@ def evaluate_auto_pause(
             select model_prob
             from decisions
             where mode in ('paper', 'live')
-              and acted = 1
             order by decided_at desc
             limit ?
             """,
@@ -207,6 +206,10 @@ def evaluate_auto_pause(
             vals = [float(r["model_prob"] or 0.0) for r in rows]
             if vals and (max(vals) - min(vals)) <= float(settings.model_stuck_epsilon):
                 reasons.append("model_output_stuck")
+            # Flag when calibrator collapsed to very few distinct outputs.
+            unique_probs = len(set(round(v, 4) for v in vals))
+            if unique_probs <= 2:
+                reasons.append("model_diversity_low")
 
     if last_sync_ok_at:
         try:

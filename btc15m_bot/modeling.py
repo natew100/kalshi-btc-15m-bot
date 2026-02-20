@@ -13,6 +13,13 @@ from .config import Settings
 from .features import FEATURE_COLUMNS
 
 
+
+class _PassthroughCalibrator:
+    """Identity calibrator when val set is too small for isotonic."""
+    def predict(self, x):
+        return np.asarray(x, dtype=float)
+
+
 @dataclass
 class ModelBundle:
     logistic: Any
@@ -154,14 +161,21 @@ def train_model(conn, settings: Settings) -> tuple[bool, str]:
         x_val, y_val = x[split_idx:], y[split_idx:]
 
         # C=0.1 for stronger regularization (default 1.0 is too loose for 17 features on noisy data)
-        logistic = LogisticRegression(max_iter=2000, penalty="l2", solver="lbfgs", C=0.1)
+        logistic = LogisticRegression(max_iter=2000, solver="lbfgs", C=0.1)
         logistic.fit(x_train, y_train)
 
-        # Isotonic calibration on validation set probabilities.
+        # Calibration on validation set probabilities.
         p_val = logistic.predict_proba(x_val)[:, 1]
-        calibrator = IsotonicRegression(out_of_bounds="clip")
-        calibrator.fit(p_val, y_val)
-        p_cal = calibrator.predict(p_val)
+        if len(x_val) >= 100:
+            calibrator = IsotonicRegression(out_of_bounds="clip")
+            calibrator.fit(p_val, y_val)
+            p_cal = calibrator.predict(p_val)
+        else:
+            # Isotonic needs 100+ points for smooth output; with fewer,
+            # it collapses to a crude step function (2-3 unique values).
+            # Raw logistic probs are already well-calibrated via log-loss.
+            calibrator = _PassthroughCalibrator()
+            p_cal = p_val
 
         brier = float(brier_score_loss(y_val, p_cal))
         ll = float(log_loss(y_val, np.clip(p_cal, 1e-6, 1 - 1e-6)))
