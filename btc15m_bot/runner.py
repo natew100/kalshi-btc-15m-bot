@@ -675,7 +675,7 @@ def run_forever() -> int:
                         model_bundle = load_model(settings.model_path)
                     last_train_attempt_at = loop_started
 
-            if settings.auto_retrain and loop_started.minute == 0 and loop_started.second < settings.poll_interval_seconds:
+            if settings.auto_retrain:
                 retrained, msg = maybe_train_model(conn, settings)
                 if retrained:
                     print(msg)
